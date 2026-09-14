@@ -73,7 +73,6 @@ local function SendWebhook(reasonString, isTest)
         }
     }
 
-    -- ส่ง Webhook แบบแยก Thread เพื่อไม่ให้เกมค้างเวลาเน็ตช้า
     task.spawn(function()
         local requestFunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
         if requestFunc then
@@ -86,7 +85,6 @@ local function SendWebhook(reasonString, isTest)
                 })
             end)
 
-            -- แจ้งเตือนในเกมเมื่อกด Test สำเร็จ
             if isTest and success then
                 Rayfield:Notify({
                     Title = "Success",
@@ -142,8 +140,19 @@ Tab:CreateToggle({
 Tab:CreateButton({
     Name = "Test Notification",
     Callback = function()
-        -- ดีเลย์เล็กน้อยเพื่อให้ UI อัปเดตลิ้งก์จากช่อง Input ก่อนส่ง (แก้บัคต้องกดหลายรอบ)
-        task.wait(0.2)
+        -- บังคับดึงข้อความจาก UI โดยตรงเมื่อกดปุ่ม (แก้ปัญหาที่ต้องกดหลายรอบ/ต้องกด Enter)
+        local guiBase = gethui and gethui() or game:GetService("CoreGui")
+        pcall(function()
+            for _, v in pairs(guiBase:GetDescendants()) do
+                if v:IsA("TextBox") and v.PlaceholderText == "Paste your Webhook URL here..." then
+                    if v.Text:match("http") then
+                        WebhookURL = v.Text
+                        if writefile then writefile(ConfigFile, WebhookURL) end
+                    end
+                end
+            end
+        end)
+        
         SendWebhook("DisconnectClientInitiated (Test)", true) 
     end,
 })
