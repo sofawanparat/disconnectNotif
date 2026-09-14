@@ -1,4 +1,12 @@
-local WindUI = loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
+end)
+
+if not success or not WindUI then
+    warn("Failed to load WindUI. Please check your internet or executor.")
+    return
+end
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
@@ -10,12 +18,15 @@ local WebhookURL = ""
 local WebhookEnabled = false
 local AutoReconnectEnabled = false
 local startTime = os.time()
-local ConfigFile = "Webhook_Disconnect_Save.txt"
+local ConfigFile = "WebhookNotif_Config.txt"
 local hasDisconnected = false
 
-if isfile and isfile(ConfigFile) then
-    WebhookURL = readfile(ConfigFile)
-end
+-- ระบบโหลดไฟล์เซฟแบบปลอดภัย
+pcall(function()
+    if isfile and isfile(ConfigFile) then
+        WebhookURL = readfile(ConfigFile)
+    end
+end)
 
 local function FormatTime(seconds)
     local hours = math.floor(seconds / 3600)
@@ -25,7 +36,7 @@ local function FormatTime(seconds)
 end
 
 local function SendWebhook(reasonString, isTest)
-    if WebhookURL == "" then 
+    if WebhookURL == "" or not WebhookURL:match("http") then 
         if isTest then
             WindUI:Notify({
                 Title = "Error",
@@ -77,7 +88,7 @@ local function SendWebhook(reasonString, isTest)
     task.spawn(function()
         local requestFunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
         if requestFunc then
-            local success, response = pcall(function()
+            local s, r = pcall(function()
                 return requestFunc({
                     Url = WebhookURL,
                     Method = "POST",
@@ -86,7 +97,7 @@ local function SendWebhook(reasonString, isTest)
                 })
             end)
 
-            if isTest and success then
+            if isTest and s then
                 WindUI:Notify({
                     Title = "Success",
                     Content = "Webhook sent! Check your Discord.",
@@ -113,14 +124,16 @@ local Tab = Window:Tab({
 
 Tab:Input({
     Title = "Discord Webhook URL",
-    Desc = "Paste your Webhook URL here...",
+    Desc = "Paste URL and tap outside the box to save",
     PlaceholderText = "https://discord.com/api/webhooks/...",
     Default = WebhookURL,
     ClearTextOnFocus = false,
     Callback = function(Text)
         if Text:match("http") then
             WebhookURL = Text
-            if writefile then writefile(ConfigFile, WebhookURL) end
+            pcall(function()
+                if writefile then writefile(ConfigFile, WebhookURL) end
+            end)
         end
     end
 })
@@ -144,18 +157,6 @@ Tab:Toggle({
 Tab:Button({
     Title = "Test Notification",
     Callback = function()
-        local guiBase = gethui and gethui() or CoreGui
-        pcall(function()
-            for _, v in pairs(guiBase:GetDescendants()) do
-                if v:IsA("TextBox") and v.PlaceholderText == "https://discord.com/api/webhooks/..." then
-                    if v.Text:match("http") then
-                        WebhookURL = v.Text
-                        if writefile then writefile(ConfigFile, WebhookURL) end
-                    end
-                end
-            end
-        end)
-        
         SendWebhook("This is a test disconnection message. (Error Code: Test)", true) 
     end
 })
@@ -184,18 +185,22 @@ end)
 
 task.spawn(function()
     pcall(function()
-        local promptOverlay = CoreGui:WaitForChild("RobloxPromptGui"):WaitForChild("promptOverlay")
-        
-        promptOverlay.ChildAdded:Connect(function(child)
-            if child.Name == "ErrorPrompt" then
-                task.wait(0.5)
-                pcall(function()
-                    local errorMsg = child.MessageArea.ErrorFrame.ErrorMessage.Text
-                    if errorMsg and errorMsg ~= "" then
-                        TriggerDisconnect(errorMsg)
+        local promptOverlay = CoreGui:WaitForChild("RobloxPromptGui", 5)
+        if promptOverlay then
+            promptOverlay = promptOverlay:WaitForChild("promptOverlay", 5)
+            if promptOverlay then
+                promptOverlay.ChildAdded:Connect(function(child)
+                    if child.Name == "ErrorPrompt" then
+                        task.wait(0.5)
+                        pcall(function()
+                            local errorMsg = child.MessageArea.ErrorFrame.ErrorMessage.Text
+                            if errorMsg and errorMsg ~= "" then
+                                TriggerDisconnect(errorMsg)
+                            end
+                        end)
                     end
                 end)
             end
-        end)
+        end
     end)
 end)
