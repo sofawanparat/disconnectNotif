@@ -1,3 +1,12 @@
+local success, WindUI = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+end)
+
+if not success or not WindUI then
+    warn("Failed to load WindUI. The executor might be blocking HTTP requests.")
+    return
+end
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
@@ -12,7 +21,6 @@ local startTime = os.time()
 local ConfigFile = "WebhookNotif_Config.txt"
 local hasDisconnected = false
 
--- ระบบดึงลิงก์เก่าที่เคยเซฟไว้ (เขียนแบบป้องกัน Error 100%)
 if isfile and readfile then
     pcall(function()
         if isfile(ConfigFile) then
@@ -28,15 +36,11 @@ local function FormatTime(seconds)
     return string.format("%02d:%02d:%02d", hours, mins, secs)
 end
 
--- โหลด Wind UI 
-local WindUI = loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
-
 local Window = WindUI:CreateWindow({
     Title = "Disconnect Notifier",
     Icon = "bell",
     Author = "System",
     Folder = "WebhookNotif",
-    Size = UDim2.fromOffset(500, 400),
     Transparent = true,
     Theme = "Dark"
 })
@@ -94,7 +98,7 @@ local function SendWebhook(reasonString, isTest)
     task.spawn(function()
         local requestFunc = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
         if requestFunc then
-            local success = pcall(function()
+            local success_req = pcall(function()
                 requestFunc({
                     Url = WebhookURL,
                     Method = "POST",
@@ -103,7 +107,7 @@ local function SendWebhook(reasonString, isTest)
                 })
             end)
 
-            if isTest and success then
+            if isTest and success_req then
                 WindUI:Notify({
                     Title = "Success",
                     Content = "Webhook sent! Check your Discord.",
@@ -173,14 +177,12 @@ local function TriggerDisconnect(message)
     end
 end
 
--- ชั้นที่ 1: ดักจับจาก GuiService 
 GuiService.ErrorMessageChanged:Connect(function(errorMessage)
     if errorMessage and errorMessage ~= "" then
         TriggerDisconnect(errorMessage)
     end
 end)
 
--- ชั้นที่ 2: ดักจับจากหน้าจอโดยตรง (ปลอดภัยไม่ทำให้แอปเด้ง)
 task.spawn(function()
     pcall(function()
         local promptOverlay = CoreGui:WaitForChild("RobloxPromptGui", 5)
