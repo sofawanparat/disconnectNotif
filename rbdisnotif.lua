@@ -1,4 +1,4 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local WindUI = loadstring(game:HttpGet("https://tree-hub.vercel.app/api/UI/WindUI"))()
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GuiService = game:GetService("GuiService")
@@ -27,11 +27,10 @@ end
 local function SendWebhook(reasonString, isTest)
     if WebhookURL == "" then 
         if isTest then
-            Rayfield:Notify({
+            WindUI:Notify({
                 Title = "Error",
                 Content = "Please paste a valid Webhook URL first!",
-                Duration = 3,
-                Image = 4483362458
+                Duration = 3
             })
         end
         return 
@@ -88,71 +87,67 @@ local function SendWebhook(reasonString, isTest)
             end)
 
             if isTest and success then
-                Rayfield:Notify({
+                WindUI:Notify({
                     Title = "Success",
                     Content = "Webhook sent! Check your Discord.",
-                    Duration = 4,
-                    Image = 4483362458
+                    Duration = 4
                 })
             end
         end
     end)
 end
 
-local Window = Rayfield:CreateWindow({
-    Name = "Disconnect Notifier",
-    LoadingTitle = "Discord Webhook Setup",
-    LoadingSubtitle = "Notification System",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "WebhookNotif",
-        FileName = "Config"
-    }
+local Window = WindUI:CreateWindow({
+    Title = "Disconnect Notifier",
+    Icon = "bell",
+    Author = "Webhook System",
+    Folder = "WebhookNotif",
+    Transparent = true,
+    Theme = "Dark"
 })
 
-local Tab = Window:CreateTab("Settings", 4483362458) 
+local Tab = Window:Tab({
+    Title = "Settings",
+    Icon = "settings"
+})
 
-local WebhookInput = Tab:CreateInput({
-    Name = "Discord Webhook URL",
-    PlaceholderText = "Paste your Webhook URL here...",
-    RemoveTextAfterFocusLost = false,
+Tab:Input({
+    Title = "Discord Webhook URL",
+    Desc = "Paste your Webhook URL here...",
+    PlaceholderText = "https://discord.com/api/webhooks/...",
+    Default = WebhookURL,
+    ClearTextOnFocus = false,
     Callback = function(Text)
         if Text:match("http") then
             WebhookURL = Text
             if writefile then writefile(ConfigFile, WebhookURL) end
         end
-    end,
+    end
 })
 
-if WebhookURL ~= "" then
-    pcall(function() WebhookInput:Set(WebhookURL) end)
-end
-
-Tab:CreateToggle({
-    Name = "Enable Webhook Notification",
-    CurrentValue = false,
-    Flag = "EnableWebhookToggle",
+Tab:Toggle({
+    Title = "Enable Webhook Notification",
+    Value = false,
     Callback = function(Value)
         WebhookEnabled = Value
-    end,
+    end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Reconnect (New Server)",
-    CurrentValue = false,
-    Flag = "AutoReconnectToggle",
+Tab:Toggle({
+    Title = "Auto Reconnect (New Server)",
+    Value = false,
     Callback = function(Value)
         AutoReconnectEnabled = Value
-    end,
+    end
 })
 
-Tab:CreateButton({
-    Name = "Test Notification",
+Tab:Button({
+    Title = "Test Notification",
     Callback = function()
         local guiBase = gethui and gethui() or CoreGui
         pcall(function()
             for _, v in pairs(guiBase:GetDescendants()) do
-                if v:IsA("TextBox") and v.PlaceholderText == "Paste your Webhook URL here..." then
+                if v:IsA("TextBox") and v.PlaceholderText == "https://discord.com/api/webhooks/..." then
                     if v.Text:match("http") then
                         WebhookURL = v.Text
                         if writefile then writefile(ConfigFile, WebhookURL) end
@@ -162,7 +157,7 @@ Tab:CreateButton({
         end)
         
         SendWebhook("This is a test disconnection message. (Error Code: Test)", true) 
-    end,
+    end
 })
 
 local function TriggerDisconnect(message)
